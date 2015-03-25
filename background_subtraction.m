@@ -1,5 +1,6 @@
 % apply simple background subtraction
-% this is a test program for different bgs algos
+% this is a TEST program for different bgs algos
+
 
 % import a gif
 cd('/Users/robert/documents/UMN/5561_CV/project/code');
