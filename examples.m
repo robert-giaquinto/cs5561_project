@@ -1,6 +1,11 @@
 % where are files located?
-cd('/Users/robert/documents/UMN/5561_CV/project/code');
-data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
+if strcmp(char(getHostAddress(java.net.InetAddress.getLocalHost)), '134.84.90.159')
+    cd('/Users/robert/documents/UMN/5561_CV/project/code');
+    data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
+else
+    % cd
+    % data_dir = ''
+end
 file_names = dir(strcat(data_dir, '*.gif'));
 
 % READ IN GIF, PUT IN IMAGE ARRAY
