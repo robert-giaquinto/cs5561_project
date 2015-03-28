@@ -1,5 +1,6 @@
 % where are files located?
 [~, user_name] = system('whoami');
+% user_name = java.lang.System.getProperty('user.name');
 if strcmp(strtrim(user_name), 'robert')
     cd('/Users/robert/documents/UMN/5561_CV/project/code');
     data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
