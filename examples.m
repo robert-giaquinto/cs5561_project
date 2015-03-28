@@ -1,10 +1,11 @@
 % where are files located?
-if strcmp(char(getHostAddress(java.net.InetAddress.getLocalHost)), '134.84.90.159')
+[~, user_name] = system('whoami');
+if strcmp(strtrim(user_name), 'robert')
     cd('/Users/robert/documents/UMN/5561_CV/project/code');
     data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
 else
-    cd('/Users/robert/documents/UMN/5561_CV/project/code');
-    data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
+    cd('/Users/robert/documents/MATLAB/...');
+    data_dir = '/Users/Tom/documents/.../data/';
 end
 file_names = dir(strcat(data_dir, '*.gif'));
 
