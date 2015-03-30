@@ -10,6 +10,7 @@ elseif num_files > 1
         file_name = strcat(data_dir, file_names(f).name);
         % read in data as a table
         temp = readtable(file_name);
+        temp.file = ones(size(temp,1), 1) * f;
         if f == 1
             % initialize data table as cell array
             data = cell(size(temp,1) * num_files, size(temp,2));
@@ -24,5 +25,6 @@ elseif num_files > 1
 else
     disp('zero files found');
     data = table();
+    data.file = ones(size(data,1), 1);
 end
 end
