@@ -8,8 +8,8 @@ if strcmp(user_name, 'robert')
     cd('/Users/robert/documents/UMN/5561_CV/project/code');
     data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
 else
-    cd('/Users/robert/documents/MATLAB/...');
-    data_dir = '/Users/Tom/documents/.../data/';
+    cd('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/');
+    data_dir = ('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/data/');
 end
 file_names = dir(strcat(data_dir, '*.gif'));
 
@@ -59,11 +59,53 @@ for i = 1:9
     imshow(uint8(frame*255)); title(plot_title);
 end
 
+% Put kalman filter here.  % Work with fore_mask_img
+imshow(fore_mask_img(:,:,:,1)*255);
+pFrame = fore_mask_img(:,:,:,1);
+
+feature1 = load('feat.mat');
+feature1 = feature1.feat;
+feature1 = rgb2gray(feature1);
+feature2 = feature1;
+
+featCoorMap = zeros(2,2,size(fore_mask_img,4)); % feature # X leftRight
+
+for f = 2:size(fore_mask_img,4)
+    cFrame = fore_mask_img(:,:,:,f);
+    cFrame = rgb2gray(cFrame);
+    
+    % error occures at frame 23
+    xcorrMat = normxcorr2(feature1, cFrame);
+    [r,c] = find(xcorrMat == max(max(xcorrMat))); % why does this sometimes return vectors?
+    r = r(1); c = c(1);
+    flag = false;
+    
+    
+    newFeature = cFrame(max(r - size(feature1,1),1):min(r-1,size(cFrame,1)), ...
+        max(c - size(feature1,2),1):min(c-1,size(cFrame,1)));
+    
+%     if isequal(size(newFeature),size(feature1))
+%         feature1 = newFeature; 
+%     end
+    newFeature = imresize(newFeature,size(feature1));
+    r = min(max(floor(r - (size(feature1,1)/2)),1),size(cFrame,1));
+    c = min(max(floor(c - (size(feature1,2)/2)),1),size(cFrame,2));
+    
+    
+    featCoorMap(1,1:2,f) = [r,c];
+    
+    pFrame = cFrame;
+end
+
+
 % EIGENBACKGROUND ALGORITHM: show only foreground
 % applies some of the functions used above all in one step
 fore_mat = eigenback(x_train, img_mat, threshold, 'median', num_components);
 fore_img = matrix_to_array(fore_mat, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Images','NumberTitle','off');
+f = load('featText.mat');
+f = f.fe;
+f = im2bw(f,0.9);
 for i = 2:18
     if mod(i, 2) == 0
         frame = fore_img(:,:,:, i) * 255;
