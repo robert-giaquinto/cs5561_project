@@ -1,7 +1,10 @@
+% GOBAL PARAMETERS;
+NUM_ROWS = 480;
+NUM_COLS = 480;
+
 % where are files located?
-[~, user_name] = system('whoami');
-% user_name = java.lang.System.getProperty('user.name');
-if strcmp(strtrim(user_name), 'robert')
+user_name = strtrim(char(java.lang.System.getProperty('user.name')));
+if strcmp(user_name, 'robert')
     cd('/Users/robert/documents/UMN/5561_CV/project/code');
     data_dir = '/Users/robert/documents/UMN/5561_CV/project/data/';
 else
@@ -26,7 +29,7 @@ img_mat = array_to_matrix(img_array);
 size(img_mat)
 
 % CONVERT image matrix back to a viewable 4D array
-img_array2 = matrix_to_array(img_mat, 480, 480);
+img_array2 = matrix_to_array(img_mat, NUM_ROWS, NUM_COLS);
 img = img_array2(:,:,:,1)*255;
 % does it look the same as original? yes.
 figure('Name','Original Preserved','NumberTitle','off');
@@ -38,15 +41,16 @@ imshow(uint8(img)); title('Transformation Back to Original');
 % split image array into a training and test set
 training_sz = 40;
 x_train = img_mat(1:training_sz, :);
-back_vec = background_model(x_train, 'median', 5);
-back_img = matrix_to_array(back_vec, 480, 480);
+num_components = 5;
+back_vec = background_model(x_train, 'median', num_components);
+back_img = matrix_to_array(back_vec, NUM_ROWS, NUM_COLS);
 imshow(uint8(back_img*255)); title('Background Image');
 
 
 % CREATE FOREGROUND MASK
 threshold = .45;
 fore_mask = foreground_mask(back_vec, img_mat, threshold);
-fore_mask_img = matrix_to_array(fore_mask, 480, 480);
+fore_mask_img = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Mask','NumberTitle','off');
 for i = 1:9
     frame = fore_mask_img(:,:,:, i);
@@ -57,8 +61,8 @@ end
 
 % EIGENBACKGROUND ALGORITHM: show only foreground
 % applies some of the functions used above all in one step
-fore_mat = eigenback(x_train, img_mat, threshold, 'median', 5);
-fore_img = matrix_to_array(fore_mat, 480, 480);
+fore_mat = eigenback(x_train, img_mat, threshold, 'median', num_components);
+fore_img = matrix_to_array(fore_mat, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Images','NumberTitle','off');
 for i = 2:18
     if mod(i, 2) == 0
@@ -68,3 +72,6 @@ for i = 2:18
         imshow(uint8(frame)); title(plot_title);
     end
 end
+
+
+% TOM'S CODE HERE-ish = LOCATION OF OBJECTS 
