@@ -14,14 +14,14 @@ for k = 1 : frameStop - frameStart
     IMG = read(vid, (k-1)*nthFrame+frameStart);
     %// IMG = some_operation(IMG);
     %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
-    mov(:,:,:,k) = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
+    mov(:,:,:,k) = uint8(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
 end
 
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
 NUM_COLS = 480;
-NUM_ROWS = vidWidth; % For .mp4
-HUM_COLS = vidHeight; % For .mp4
+NUM_ROWS = vidWidth/frameSizeFactor; % For .mp4
+NUM_COLS = vidHeight/frameSizeFactor; % For .mp4
 
 % where are files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
@@ -109,7 +109,7 @@ for f = 2:size(fore_mask_img,4)
 %     if isequal(size(newFeature),size(feature1))
 %         feature1 = newFeature; 
 %     end
-    newFeature = imresize(newFeature,size(feature1));
+%     newFeature = imresize(newFeature,size(feature1));
     r = min(max(floor(r - (size(feature1,1)/2)),1),size(cFrame,1));
     c = min(max(floor(c - (size(feature1,2)/2)),1),size(cFrame,2));
     
