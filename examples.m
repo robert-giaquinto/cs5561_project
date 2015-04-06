@@ -1,6 +1,27 @@
+% IMPORT VIDEO
+frameSizeFactor = 4; % Makes frames smaller, faster to compute.
+nthFrame = 10; % Take every nth frame from the video.
+frameStart = 2860;
+frameStop = 2900;
+vid = VideoReader('GOPR0298.mp4');
+vidWidth = vid.Width;
+vidHeight = vid.Height;
+nFrames = floor(vid.NumberOfFrame/nthFrame); %%// xyloObj.NumberOfFrames;
+%mov = struct('cdata',zeros(vidHeight,vidWidth,3,'uint8'),'colormap',[]);
+%mov(1:nFrames) = struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'),'colormap',[]);
+mov = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3,nFrames);
+for k = 1 : frameStop - frameStart
+    IMG = read(vid, (k-1)*nthFrame+frameStart);
+    %// IMG = some_operation(IMG);
+    %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
+    mov(:,:,:,k) = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
+end
+
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
 NUM_COLS = 480;
+NUM_ROWS = vidWidth; % For .mp4
+HUM_COLS = vidHeight; % For .mp4
 
 % where are files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
@@ -19,6 +40,7 @@ file_names = dir(strcat(data_dir, '*.gif'));
 file = file_names(1);
 file_name = strcat(data_dir, file.name);
 img_array = create_img_array(file_name);
+img_array = mov; % For using the video sequence.
 % display 10th image
 img = img_array(:,:,:,10);
 imshow(uint8(img*255)); title('Image from GIF, stored in 4D array');
