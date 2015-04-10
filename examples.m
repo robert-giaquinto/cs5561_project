@@ -14,7 +14,7 @@ for k = 1 : frameStop - frameStart
     IMG = read(vid, (k-1)*nthFrame+frameStart);
     %// IMG = some_operation(IMG);
     %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
-    mov(:,:,:,k) = uint8(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
+    mov(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
 end
 
 % GOBAL PARAMETERS;
@@ -51,7 +51,7 @@ img_mat = array_to_matrix(img_array);
 size(img_mat)
 
 % CONVERT image matrix back to a viewable 4D array
-img_array2 = matrix_to_array(img_mat, NUM_ROWS, NUM_COLS);
+img_array2 = matrix_to_array(img_mat, NUM_COLS, NUM_ROWS);
 img = img_array2(:,:,:,1)*255;
 % does it look the same as original? yes.
 figure('Name','Original Preserved','NumberTitle','off');
