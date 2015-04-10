@@ -1,3 +1,7 @@
+% April 7th: I changed the input of matrix_to_array(img_mat, NUM_ROWS, NUM_COLS)
+    % to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
+    % problem, and I don't know why.
+
 % IMPORT VIDEO
 frameSizeFactor = 4; % Makes frames smaller, faster to compute.
 nthFrame = 10; % Take every nth frame from the video.
@@ -20,8 +24,8 @@ end
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
 NUM_COLS = 480;
-NUM_ROWS = vidWidth/frameSizeFactor; % For .mp4
-NUM_COLS = vidHeight/frameSizeFactor; % For .mp4
+NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
+NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
 
 % where are files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
@@ -51,7 +55,7 @@ img_mat = array_to_matrix(img_array);
 size(img_mat)
 
 % CONVERT image matrix back to a viewable 4D array
-img_array2 = matrix_to_array(img_mat, NUM_COLS, NUM_ROWS);
+img_array2 = matrix_to_array(img_mat, NUM_ROWS, NUM_COLS);
 img = img_array2(:,:,:,1)*255;
 % does it look the same as original? yes.
 figure('Name','Original Preserved','NumberTitle','off');
@@ -70,7 +74,7 @@ imshow(uint8(back_img*255)); title('Background Image');
 
 
 % CREATE FOREGROUND MASK
-threshold = .45;
+threshold = .10;
 fore_mask = foreground_mask(back_vec, img_mat, threshold);
 fore_mask_img = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Mask','NumberTitle','off');
