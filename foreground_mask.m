@@ -1,4 +1,4 @@
-function fore_mask = foreground_mask(back_vec, x_test, thres_val)
+function fore_mask = foreground_mask(back_vec, x, thres_val)
 % Use a vector represent the background (see background_model function)
 % to subtract the background from images.
 %
@@ -20,7 +20,7 @@ switch nargin
 end
 
 % subtract background from the query images
-fore_mask = abs(bsxfun(@minus, x_test, back_vec));
+fore_mask = abs(bsxfun(@minus, x, back_vec));
 
 % thresholding: keep only differences that are 'significant' in each color
 cols_per_color = size(fore_mask, 2) / 3;
@@ -45,10 +45,4 @@ gre_mask2(gre_mask2 > 0) = 1;
 
 % recombine
 fore_mask = cat(2, red_mask2, blu_mask2, gre_mask2);
-
-% old approach:
-% thres = thres_val * max(max(fore_mask)); % take max across all colors
-% fore_mask(fore_mask < thres) = 0;
-% set every significant difference to True
-%fore_mask(fore_mask > 0) = 1;
 end

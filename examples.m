@@ -74,9 +74,20 @@ imshow(uint8(back_img*255)); title('Background Image');
 
 
 % CREATE FOREGROUND MASK
-threshold = .10;
+threshold = .15;
 fore_mask = foreground_mask(back_vec, img_mat, threshold);
-fore_mask_img = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
+fore_array = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
+figure('Name','Foreground Mask','NumberTitle','off');
+for i = 1:9
+    frame = fore_array(:,:,:, i);
+    subplot(3, 3, i);
+    plot_title = sprintf('Frame %d', i);
+    imshow(uint8(frame*255)); title(plot_title);
+end
+
+% reduce noise of foreground:
+% label connected regions, keep only regions 25% as large as largest region
+fore_mask_img = label_regions(fore_array, 4, .25);
 figure('Name','Foreground Mask','NumberTitle','off');
 for i = 1:9
     frame = fore_mask_img(:,:,:, i);
@@ -84,6 +95,8 @@ for i = 1:9
     plot_title = sprintf('Frame %d', i);
     imshow(uint8(frame*255)); title(plot_title);
 end
+
+
 
 % Put kalman filter here.  % Work with fore_mask_img
 imshow(fore_mask_img(:,:,:,1)*255);
