@@ -24,8 +24,8 @@ end
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
 NUM_COLS = 480;
-NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
-NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
+% NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
+% NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
 
 % where are files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
@@ -44,7 +44,7 @@ file_names = dir(strcat(data_dir, '*.gif'));
 file = file_names(1);
 file_name = strcat(data_dir, file.name);
 img_array = create_img_array(file_name);
-img_array = mov; % For using the video sequence.
+% img_array = mov; % For using the video sequence.
 % display 10th image
 img = img_array(:,:,:,10);
 imshow(uint8(img*255)); title('Image from GIF, stored in 4D array');
@@ -154,5 +154,79 @@ for i = 2:18
     end
 end
 
+%% Kalman Filter Code
 
-% TOM'S CODE HERE-ish = LOCATION OF OBJECTS 
+frames = fore_img;
+t = 1; % change in time
+sFrame = 1; % starting frame
+eFrame = 50; % end frame;
+aMag = 1; % acelleration magnitude
+mNoiseX = 1; % measurement noise (x)
+mNoiseY = 1; % measurement noise (y)
+E_z = [mNoiseX, 0; 0, mNoiseY];
+E_x = [(t^4)/4, 0, (t^3)/2, 0 
+        0, (t^4)/4, 0, (t^3)/2 
+        (t^3)/2, 0, t^2, 0 
+        0, (t^3)/2, 0, t^2 ] ;
+Q_est = [featCoorMap(1,2,2),featCoorMap(1,1,2),0,0];  
+Cov = E_x; % initial variance of position
+A = [1, 0, t, 0
+    0, 1, 0, t
+    0, 0, 1, 0
+    0, 0, 0, 1];
+
+B = [(t^2)/2, (t^2)/2, t, t];
+
+C = [1, 0, 0, 0; 0, 1, 0, 0];
+
+estPos = []; % position estimated by filter.
+estVel = []; % velocity estimated by filter.
+truePos = []; % true position.
+trueVel = []; % true velocity.
+
+p_est = Cov; 
+p_state = []; % Running List of predicted states.
+p_var = []; % Running List of predicted Covariance Matracies
+rad = 8; % plotting circle radius
+circleValues = 0:0.2:2*pi;
+figure;
+for i = 2:eFrame
+    frame = frames(:,:,:,i);
+    frame = frame(:,:,1);
+    Q_obs(:,i) = [featCoorMap(1,2,i), featCoorMap(1,1,i)]; % x = 2, y = 1
+    
+    
+    % KALMAN FILTER
+    % Prediction of next location
+    Q_est = (A * Q_est') + (B * aMag)';
+    p_state(end+1) = Q_est(1); % Bookkeeping
+    % Predict Next CovMat
+    Cov = A * Cov * A' * E_x;
+    p_var(end+1,:,:) = Cov; % Bookkeeping
+    
+    % Calculate Gain constant
+    K = Cov*C'*inv(C*Cov*C'+E_z);
+    
+    % new estimate
+    if ~isnan(Q_obs(1,i)) && ~isnan(Q_obs(2,i))
+        Q_est = Q_est + K * (Q_obs(:,i) - C * Q_est);
+    end
+    Q_est = Q_est';  
+    Cov = (eye(4) - K * C) * Cov;
+    
+    % Bookkeeping
+    estPos(end+1,:) = Q_est(1:2);
+    estVel(end+1,:) = Q_est(3:4);
+    
+    imagesc(img);
+    axis off
+    colormap(gray);
+    hold on;
+    plot(rad*sin(circleValues)+Q_obs(2,i),rad*cos(circleValues)+Q_obs(1,i),'.b'); % the actual tracking
+    plot(rad*sin(circleValues)+Q_est(2),rad*cos(circleValues)+Q_est(1),'.r'); % the kalman filtered tracking
+    hold off
+    drawnow;
+    pause(0.1);
+    
+end
+
