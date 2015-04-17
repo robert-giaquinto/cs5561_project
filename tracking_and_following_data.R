@@ -6,7 +6,7 @@ library(grid)
 set.seed(1234)
 
 # load tracking functions
-source("/Users/robert/Documents/UMN/5561_CV/Project/tracking_and_following_data/tracking_functions.R")
+source("/Users/robert/Documents/UMN/5561_CV/Project/code/tracking_functions.R")
 
 # plot a few simulations
 save_simulations <- function(num_simulations, follow, background_filename, num_steps=50, plot_size=1) {
