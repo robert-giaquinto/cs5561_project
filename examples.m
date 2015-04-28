@@ -1,25 +1,25 @@
 % April 7th: I changed the input of matrix_to_array(img_mat, NUM_ROWS, NUM_COLS)
-    % to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
-    % problem, and I don't know why.
+% to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
+% problem, and I don't know why.
 
 % IMPORT VIDEO
-frameSizeFactor = 4; % Makes frames smaller, faster to compute.
-nthFrame = 10; % Take every nth frame from the video.
-frameStart = 2860;
-frameStop = 2900;
-vid = VideoReader('GOPR0298.mp4');
-vidWidth = vid.Width;
-vidHeight = vid.Height;
-nFrames = floor(vid.NumberOfFrame/nthFrame); %%// xyloObj.NumberOfFrames;
-%mov = struct('cdata',zeros(vidHeight,vidWidth,3,'uint8'),'colormap',[]);
-%mov(1:nFrames) = struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'),'colormap',[]);
-mov = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3,nFrames);
-for k = 1 : frameStop - frameStart
-    IMG = read(vid, (k-1)*nthFrame+frameStart);
-    %// IMG = some_operation(IMG);
-    %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
-    mov(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
-end
+% frameSizeFactor = 4; % Makes frames smaller, faster to compute.
+% nthFrame = 10; % Take every nth frame from the video.
+% frameStart = 2860;
+% frameStop = 2900;
+% vid = VideoReader('GOPR0298.mp4');
+% vidWidth = vid.Width;
+% vidHeight = vid.Height;
+% nFrames = floor(vid.NumberOfFrame/nthFrame); %%// xyloObj.NumberOfFrames;
+% %mov = struct('cdata',zeros(vidHeight,vidWidth,3,'uint8'),'colormap',[]);
+% %mov(1:nFrames) = struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'),'colormap',[]);
+% mov = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3,nFrames);
+% for k = 1 : frameStop - frameStart
+%     IMG = read(vid, (k-1)*nthFrame+frameStart);
+%     %// IMG = some_operation(IMG);
+%     %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
+%     mov(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
+% end
 
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
@@ -41,7 +41,7 @@ file_names = dir(strcat(data_dir, '*.gif'));
 
 
 % READ IN GIF, PUT IN IMAGE ARRAY
-file = file_names(1);
+file = file_names(1); %31 for single dot
 file_name = strcat(data_dir, file.name);
 img_array = create_img_array(file_name);
 % img_array = mov; % For using the video sequence.
@@ -114,24 +114,33 @@ for f = 2:size(fore_mask_img,4)
     cFrame = rgb2gray(cFrame);
     
     % error occures at frame 23
-    xcorrMat = normxcorr2(feature1, cFrame);
-    [r,c] = find(xcorrMat == max(max(xcorrMat))); % why does this sometimes return vectors?
-    r = r(1); c = c(1);
-    flag = false;
     
     
+    numOfObjects = 2;
+    for i = 1:numOfObjects
+        xcorrMat = normxcorr2(feature1, cFrame);
+        [r,c] = find(xcorrMat == max(max(xcorrMat))); % why does this sometimes return vectors?
+        r = r(1); c = c(1);
+        flag = false;
+        cFrame(max(r - size(feature1,1),1):min(r-1,size(cFrame,1)), ...
+            max(c - size(feature1,2),1):min(c-1,size(cFrame,1))) = 0;
+        
+        r = min(max(floor(r - (size(feature1,1)/2)),1),size(cFrame,1));
+        c = min(max(floor(c - (size(feature1,2)/2)),1),size(cFrame,2));
+        
+        featCoorMap(i,1:2,f) = [r,c]; %1 = y, 2 = x
+    end
     newFeature = cFrame(max(r - size(feature1,1),1):min(r-1,size(cFrame,1)), ...
         max(c - size(feature1,2),1):min(c-1,size(cFrame,1)));
     
-%     if isequal(size(newFeature),size(feature1))
-%         feature1 = newFeature; 
-%     end
-%     newFeature = imresize(newFeature,size(feature1));
-    r = min(max(floor(r - (size(feature1,1)/2)),1),size(cFrame,1));
-    c = min(max(floor(c - (size(feature1,2)/2)),1),size(cFrame,2));
+    %     if isequal(size(newFeature),size(feature1))
+    %         feature1 = newFeature;
+    %     end
+    %     newFeature = imresize(newFeature,size(feature1));
     
     
-    featCoorMap(1,1:2,f) = [r,c];
+    
+    
     
     pFrame = cFrame;
 end
@@ -155,7 +164,8 @@ for i = 2:18
 end
 
 %% Kalman Filter Code
-
+fileStruct = load('singledot');
+featCoorMap = fileStruct.featCoorMap;
 frames = fore_img;
 t = 1; % change in time
 sFrame = 1; % starting frame
@@ -164,12 +174,12 @@ aMag = 1; % acelleration magnitude
 mNoiseX = 1; % measurement noise (x)
 mNoiseY = 1; % measurement noise (y)
 E_z = [mNoiseX, 0; 0, mNoiseY];
-E_x = [(t^4)/4, 0, (t^3)/2, 0 
-        0, (t^4)/4, 0, (t^3)/2 
-        (t^3)/2, 0, t^2, 0 
-        0, (t^3)/2, 0, t^2 ] ;
-Q_est = [featCoorMap(1,2,2),featCoorMap(1,1,2),0,0];  
-Cov = E_x; % initial variance of position
+E_x = [(t^4)/4, 0, (t^3)/2, 0
+    0, (t^4)/4, 0, (t^3)/2
+    (t^3)/2, 0, t^2, 0
+    0, (t^3)/2, 0, t^2 ] ;
+Q_est = [featCoorMap(1,1,2),featCoorMap(1,2,2),0,0];  %x,y,vx,vy
+cov = E_x; % initial variance of position
 A = [1, 0, t, 0
     0, 1, 0, t
     0, 0, 1, 0
@@ -184,13 +194,14 @@ estVel = []; % velocity estimated by filter.
 truePos = []; % true position.
 trueVel = []; % true velocity.
 
-p_est = Cov; 
+p_est = cov;
 p_state = []; % Running List of predicted states.
 p_var = []; % Running List of predicted Covariance Matracies
 rad = 8; % plotting circle radius
 circleValues = 0:0.2:2*pi;
 figure;
 for i = 2:eFrame
+    pause(0.3);
     frame = frames(:,:,:,i);
     frame = frame(:,:,1);
     Q_obs(:,i) = [featCoorMap(1,2,i), featCoorMap(1,1,i)]; % x = 2, y = 1
@@ -201,18 +212,19 @@ for i = 2:eFrame
     Q_est = (A * Q_est') + (B * aMag)';
     p_state(end+1) = Q_est(1); % Bookkeeping
     % Predict Next CovMat
-    Cov = A * Cov * A' * E_x;
-    p_var(end+1,:,:) = Cov; % Bookkeeping
+    cov = A * cov * A' * E_x;
+    p_var(end+1,:,:) = cov; % Bookkeeping
     
     % Calculate Gain constant
-    K = Cov*C'*inv(C*Cov*C'+E_z);
+    K = cov*C'*inv(C*cov*C'+E_z);
     
     % new estimate
     if ~isnan(Q_obs(1,i)) && ~isnan(Q_obs(2,i))
         Q_est = Q_est + K * (Q_obs(:,i) - C * Q_est);
     end
-    Q_est = Q_est';  
-    Cov = (eye(4) - K * C) * Cov;
+    Q_est = Q_est';
+    Id = eye(4);
+    cov = (Id - K * C) * cov;
     
     % Bookkeeping
     estPos(end+1,:) = Q_est(1:2);
@@ -222,11 +234,11 @@ for i = 2:eFrame
     axis off
     colormap(gray);
     hold on;
-    plot(rad*sin(circleValues)+Q_obs(2,i),rad*cos(circleValues)+Q_obs(1,i),'.b'); % the actual tracking
-    plot(rad*sin(circleValues)+Q_est(2),rad*cos(circleValues)+Q_est(1),'.r'); % the kalman filtered tracking
+    plot(rad*sin(circleValues)+Q_obs(1,i),rad*cos(circleValues)+Q_obs(2,i),'.b'); % the actual tracking
+    plot(rad*sin(circleValues)+Q_est(1),rad*cos(circleValues)+Q_est(2),'.r'); % the kalman filtered tracking
     hold off
     drawnow;
-    pause(0.1);
+    
     
 end
 
