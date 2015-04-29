@@ -1,31 +1,37 @@
+numOfObjects = 1;
+
 % April 7th: I changed the input of matrix_to_array(img_mat, NUM_ROWS, NUM_COLS)
 % to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
 % problem, and I don't know why.
 
+
 % IMPORT VIDEO
 % frameSizeFactor = 4; % Makes frames smaller, faster to compute.
 % nthFrame = 10; % Take every nth frame from the video.
-% frameStart = 2860;
-% frameStop = 2900;
-% vid = VideoReader('GOPR0298.mp4');
+% frameStart = 1770;
+% frameStop = 2330;
+% vid = VideoReader('GOPR0302.mp4'); %gopro0302 starts at 1770, ends at 2330. There is more after though
 % vidWidth = vid.Width;
 % vidHeight = vid.Height;
 % nFrames = floor(vid.NumberOfFrame/nthFrame); %%// xyloObj.NumberOfFrames;
 % %mov = struct('cdata',zeros(vidHeight,vidWidth,3,'uint8'),'colormap',[]);
 % %mov(1:nFrames) = struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'),'colormap',[]);
 % mov = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3,nFrames);
-% for k = 1 : frameStop - frameStart
-%     IMG = read(vid, (k-1)*nthFrame+frameStart);
+% vidIndexList = frameStart:nthFrame:frameStop; % holds all of the indicies of the frames to be used.
+% for k = 1:length(vidIndexList)
+%     IMG = read(vid, vidIndexList(k));
 %     %// IMG = some_operation(IMG);
 %     %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
 %     mov(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
 % end
 
+mov = load('0302mov');
+mov = mov.mov;
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
 NUM_COLS = 480;
-% NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
-% NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
+NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
+NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
 
 % where are files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
@@ -41,11 +47,16 @@ file_names = dir(strcat(data_dir, '*.gif'));
 
 
 % READ IN GIF, PUT IN IMAGE ARRAY
-file = file_names(1); %31 for single dot
-file_name = strcat(data_dir, file.name);
-img_array = create_img_array(file_name);
-% img_array = mov; % For using the video sequence.
+% % FOR GIF
+% file = file_names(1); %31 for single dot
+% file_name = strcat(data_dir, file.name);
+% img_array = create_img_array(file_name);
+
+% FOR MP4!
+img_array = mov; % For using the video sequence.
 % display 10th image
+
+
 img = img_array(:,:,:,10);
 imshow(uint8(img*255)); title('Image from GIF, stored in 4D array');
 
@@ -97,7 +108,6 @@ for i = 1:9
 end
 
 
-
 % Put kalman filter here.  % Work with fore_mask_img
 imshow(fore_mask_img(:,:,:,1)*255);
 pFrame = fore_mask_img(:,:,:,1);
@@ -114,9 +124,6 @@ for f = 2:size(fore_mask_img,4)
     cFrame = rgb2gray(cFrame);
     
     % error occures at frame 23
-    
-    
-    numOfObjects = 2;
     for i = 1:numOfObjects
         xcorrMat = normxcorr2(feature1, cFrame);
         [r,c] = find(xcorrMat == max(max(xcorrMat))); % why does this sometimes return vectors?
@@ -137,11 +144,7 @@ for f = 2:size(fore_mask_img,4)
     %         feature1 = newFeature;
     %     end
     %     newFeature = imresize(newFeature,size(feature1));
-    
-    
-    
-    
-    
+
     pFrame = cFrame;
 end
 
@@ -163,23 +166,30 @@ for i = 2:18
     end
 end
 
-%% Kalman Filter Code
-fileStruct = load('singledot');
-featCoorMap = fileStruct.featCoorMap;
+% %% Kalman Filter Code
+% fileStruct = load('doubleDot');
+% featCoorMap = fileStruct.featCoorMap;
 frames = fore_img;
+% imgarr = load('doubleDotimgs');
+% frames = imgarr.img_array;
+frames = img_array;
 t = 1; % change in time
 sFrame = 1; % starting frame
-eFrame = 50; % end frame;
+eFrame = size(frames,4); % end frame;
 aMag = 1; % acelleration magnitude
-mNoiseX = 1; % measurement noise (x)
-mNoiseY = 1; % measurement noise (y)
+mNoiseX = 0.5; % measurement noise (x).  More measurement noise means don't trust measurement as much
+mNoiseY = 0.5; % measurement noise (y)
 E_z = [mNoiseX, 0; 0, mNoiseY];
 E_x = [(t^4)/4, 0, (t^3)/2, 0
     0, (t^4)/4, 0, (t^3)/2
     (t^3)/2, 0, t^2, 0
     0, (t^3)/2, 0, t^2 ] ;
-Q_est = [featCoorMap(1,1,2),featCoorMap(1,2,2),0,0];  %x,y,vx,vy
-cov = E_x; % initial variance of position
+for f = 1:numOfObjects
+    Q_est(f,:) = [featCoorMap(f,2,2),featCoorMap(f,1,2),0,0];  %x,y,vx,vy
+    cov(1:4,1:4,f) = E_x;
+end
+
+% cov(1:2,:,:) = [E_x,E_x]; % initial variance of position.  Check this
 A = [1, 0, t, 0
     0, 1, 0, t
     0, 0, 1, 0
@@ -200,45 +210,89 @@ p_var = []; % Running List of predicted Covariance Matracies
 rad = 8; % plotting circle radius
 circleValues = 0:0.2:2*pi;
 figure;
-for i = 2:eFrame
-    pause(0.3);
-    frame = frames(:,:,:,i);
-    frame = frame(:,:,1);
-    Q_obs(:,i) = [featCoorMap(1,2,i), featCoorMap(1,1,i)]; % x = 2, y = 1
+for f = 2:eFrame
+    pause(0.4);
+    frame = frames(:,:,:,f);
+    %     frame = frame(:,:,:,1);
     
-    
-    % KALMAN FILTER
-    % Prediction of next location
-    Q_est = (A * Q_est') + (B * aMag)';
-    p_state(end+1) = Q_est(1); % Bookkeeping
-    % Predict Next CovMat
-    cov = A * cov * A' * E_x;
-    p_var(end+1,:,:) = cov; % Bookkeeping
-    
-    % Calculate Gain constant
-    K = cov*C'*inv(C*cov*C'+E_z);
-    
-    % new estimate
-    if ~isnan(Q_obs(1,i)) && ~isnan(Q_obs(2,i))
-        Q_est = Q_est + K * (Q_obs(:,i) - C * Q_est);
+    % For each previous object estimation, j, use observation coordinates
+    % that are closest to the prediction.
+    indexList = 1:numOfObjects;
+    for j = 1:numOfObjects
+        
+        curQ_est = Q_est(j,:);
+        curCov = cov(:,:,j);
+        bestEstScore = inf; % Lower is better, distance between 
+        % For each coordinate featCoorMap, run the kalman filter
+        for k = 1:length(indexList)
+            ind = indexList(k);
+            
+            % This part needs to be rethought 
+            Q_obs = [featCoorMap(ind,2,f), featCoorMap(ind,1,f)]; % x = 2, y = 1
+            
+            % KALMAN FILTER
+            % Prediction of next location
+            tempQ_est = (A * curQ_est') ;%+ (B * aMag)';  % why does it work better when B*aMag is commented out?
+            
+            % Predict Next CovMat
+            tempcov = A * curCov * A' * E_x;
+            
+            
+            % Calculate Gain constant
+            K = tempcov*C'*inv(C*tempcov*C'+E_z);
+%             K = zeros(size(K));
+            
+            % new estimate
+            if ~isnan(Q_obs(1)) && ~isnan(Q_obs(2))
+                tempQ_est = tempQ_est + K * (Q_obs' - C * tempQ_est);
+            end
+            
+            % Here we now have an estimate, tempQ_est, and we need to store
+            % this estimate and compare to the cartitian coordinates of the
+            % observation.
+            
+            score = sqrt(sum((tempQ_est(1:2) - Q_obs(1:2)').^2));
+            
+            % Evaulate scores, assign Q_est and cov if best score
+            if score < bestEstScore
+                bestEstScore = score;
+                Q_est(j,:) = tempQ_est';
+                Ident = eye(4);
+                cov(:,:,j) = (Ident - K * C) * curCov;
+                indexUsed = ind;
+            end
+        end
+        removeIndex = find(indexList == indexUsed);
+        indexList = [indexList(1:removeIndex-1),indexList(removeIndex+1:end)];
+%         p_var(end+1,:,:) = cov; % Bookkeeping
+%         p_state(end+1) = Q_est(1); % Bookkeeping
+        
+        % actualPos holds the measured coordinates in the proper index, j,
+        % which is consistant with Q_est, estPos, estVel.
+        actualPos(j,1:2,f) = [featCoorMap(indexUsed,2,f), featCoorMap(indexUsed,1,f)]; % in x,y
+        % Bookkeeping
+        estPos(j,1:2,f) = Q_est(j,1:2);
+        estVel(j,1:2,f) = Q_est(j,3:4);
     end
-    Q_est = Q_est';
-    Id = eye(4);
-    cov = (Id - K * C) * cov;
-    
-    % Bookkeeping
-    estPos(end+1,:) = Q_est(1:2);
-    estVel(end+1,:) = Q_est(3:4);
-    
-    imagesc(img);
-    axis off
-    colormap(gray);
+  
     hold on;
-    plot(rad*sin(circleValues)+Q_obs(1,i),rad*cos(circleValues)+Q_obs(2,i),'.b'); % the actual tracking
-    plot(rad*sin(circleValues)+Q_est(1),rad*cos(circleValues)+Q_est(2),'.r'); % the kalman filtered tracking
-    hold off
-    drawnow;
     
+    imagesc(frame);
+    axis image
+    %     axis off
+    colormap(gray);
+    plot(rad*sin(circleValues)+actualPos(1,1,f),rad*cos(circleValues)+actualPos(1,2,f),'.g'); % the actual tracking
+    plot(rad*sin(circleValues)+estPos(1,1,f),rad*cos(circleValues)+estPos(1,2,f),'.r'); % the kalman filtered tracking
+    if numOfObjects == 2
+        plot(rad*sin(circleValues)+actualPos(2,1,f),rad*cos(circleValues)+actualPos(2,2,f),'.b'); % the actual tracking
+        plot(rad*sin(circleValues)+estPos(2,1,f),rad*cos(circleValues)+estPos(2,2,f),'.y'); % the kalman filtered tracking
+    end
+    
+    hold off
+    %     set(gca,'Ydir','Normal')
+    %     set(gca,'Xdir','Normal')
+    drawnow;
+    disp(f)
     
 end
 
