@@ -1,31 +1,33 @@
-numOfObjects = 1;
-
-% April 7th: I changed the input of matrix_to_array(img_mat, NUM_ROWS, NUM_COLS)
-% to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
-% problem, and I don't know why.
-
-
-% IMPORT VIDEO
+% numOfObjects = 2;
 % frameSizeFactor = 4; % Makes frames smaller, faster to compute.
+% 
+% % April 7th: I changed the input of matrix_to_array(img_mat, NUM_ROWS, NUM_COLS)
+% % to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
+% % problem, and I don't know why.
+% 
+% 
+% % IMPORT VIDEO
+% 
 % nthFrame = 10; % Take every nth frame from the video.
-% frameStart = 1770;
-% frameStop = 2330;
-% vid = VideoReader('GOPR0302.mp4'); %gopro0302 starts at 1770, ends at 2330. There is more after though
+% frameStart = 2420;
+% frameStop = 2650;
+% vid = VideoReader('GOPR0303.mp4'); %gopro0302 starts at 1770, ends at 2330. There is more after though
+%                                    %gopro0303 1650-2150. 2420-2650. 2900-3350
 % vidWidth = vid.Width;
 % vidHeight = vid.Height;
-% nFrames = floor(vid.NumberOfFrame/nthFrame); %%// xyloObj.NumberOfFrames;
+% nFrames = ((frameStop-frameStart)/nthFrame); %%// xyloObj.NumberOfFrames;
 % %mov = struct('cdata',zeros(vidHeight,vidWidth,3,'uint8'),'colormap',[]);
 % %mov(1:nFrames) = struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'),'colormap',[]);
 % mov = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3,nFrames);
 % vidIndexList = frameStart:nthFrame:frameStop; % holds all of the indicies of the frames to be used.
 % for k = 1:length(vidIndexList)
 %     IMG = read(vid, vidIndexList(k));
-%     %// IMG = some_operation(IMG);
-%     %mov(k).cdata = imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]);
 %     mov(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
 % end
 
-mov = load('0302mov');
+
+
+mov = load('0303movDeflection');
 mov = mov.mov;
 % GOBAL PARAMETERS;
 NUM_ROWS = 480;
@@ -76,7 +78,8 @@ imshow(uint8(img)); title('Transformation Back to Original');
 % CREATE BACKGROUND MODEL
 % need to put images into a matrix form!!!!
 % split image array into a training and test set
-training_sz = 40;
+% training_sz = 40; % FOR GIF
+training_sz = nFrames; % FOR GIF
 x_train = img_mat(1:training_sz, :);
 num_components = 5;
 back_vec = background_model(x_train, 'median', num_components);
@@ -85,8 +88,8 @@ imshow(uint8(back_img*255)); title('Background Image');
 
 
 % CREATE FOREGROUND MASK
-threshold = .15;
-fore_mask = foreground_mask(back_vec, img_mat, threshold);
+threshold = .05;
+fore_mask = foreground_mask(back_vec, img_mat, threshold); % threshold should be 0.05 for video
 fore_array = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Mask','NumberTitle','off');
 for i = 1:9
@@ -111,26 +114,33 @@ end
 % Put kalman filter here.  % Work with fore_mask_img
 imshow(fore_mask_img(:,:,:,1)*255);
 pFrame = fore_mask_img(:,:,:,1);
-
 feature1 = load('feat.mat');
 feature1 = feature1.feat;
 feature1 = rgb2gray(feature1);
 feature2 = feature1;
-
+feature1 = load('featureP.mat');
+feature1 = feature1.featureP;
 featCoorMap = zeros(2,2,size(fore_mask_img,4)); % feature # X leftRight
 
 for f = 2:size(fore_mask_img,4)
     cFrame = fore_mask_img(:,:,:,f);
     cFrame = rgb2gray(cFrame);
-    
+    a = 1;
     % error occures at frame 23
+    xcorrMat = normxcorr2(feature1, cFrame);
     for i = 1:numOfObjects
-        xcorrMat = normxcorr2(feature1, cFrame);
+        
         [r,c] = find(xcorrMat == max(max(xcorrMat))); % why does this sometimes return vectors?
         r = r(1); c = c(1);
+        
+        ydist = (size(feature1,1)/2)+5;
+        xdist = (size(feature1,2)/2)+2;
+        ytodel = r-floor(ydist):ceil(r+ydist);
+        xtodel = c-floor(xdist):ceil(c+xdist);
+        xcorrMat(ytodel,xtodel) = 0;
         flag = false;
-        cFrame(max(r - size(feature1,1),1):min(r-1,size(cFrame,1)), ...
-            max(c - size(feature1,2),1):min(c-1,size(cFrame,1))) = 0;
+%         cFrame(max(r - size(feature1,1),1):min(r-1,size(cFrame,1)), ...
+%             max(c - size(feature1,2),1):min(c-1,size(cFrame,1))) = 0;
         
         r = min(max(floor(r - (size(feature1,1)/2)),1),size(cFrame,1));
         c = min(max(floor(c - (size(feature1,2)/2)),1),size(cFrame,2));
@@ -211,7 +221,7 @@ rad = 8; % plotting circle radius
 circleValues = 0:0.2:2*pi;
 figure;
 for f = 2:eFrame
-    pause(0.4);
+    pause(0.3);
     frame = frames(:,:,:,f);
     %     frame = frame(:,:,:,1);
     
@@ -276,16 +286,17 @@ for f = 2:eFrame
     end
   
     hold on;
-    
-    imagesc(frame);
+    sx = size(frame,2);
+    sy = size(frame,1);
+    imagesc(flipud(frame));
     axis image
     %     axis off
     colormap(gray);
-    plot(rad*sin(circleValues)+actualPos(1,1,f),rad*cos(circleValues)+actualPos(1,2,f),'.g'); % the actual tracking
-    plot(rad*sin(circleValues)+estPos(1,1,f),rad*cos(circleValues)+estPos(1,2,f),'.r'); % the kalman filtered tracking
+    plot(rad*sin(circleValues)+actualPos(1,1,f),rad*cos(circleValues)+(sy-actualPos(1,2,f)),'.g'); % the actual tracking
+    plot(rad*sin(circleValues)+estPos(1,1,f),rad*cos(circleValues)+(sy-estPos(1,2,f)),'.r'); % the kalman filtered tracking
     if numOfObjects == 2
-        plot(rad*sin(circleValues)+actualPos(2,1,f),rad*cos(circleValues)+actualPos(2,2,f),'.b'); % the actual tracking
-        plot(rad*sin(circleValues)+estPos(2,1,f),rad*cos(circleValues)+estPos(2,2,f),'.y'); % the kalman filtered tracking
+        plot(rad*sin(circleValues)+actualPos(2,1,f),rad*cos(circleValues)+(sy-actualPos(2,2,f)),'.b'); % the actual tracking
+        plot(rad*sin(circleValues)+estPos(2,1,f),rad*cos(circleValues)+(sy-estPos(2,2,f)),'.y'); % the kalman filtered tracking
     end
     
     hold off
