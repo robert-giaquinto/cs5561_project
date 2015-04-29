@@ -13,7 +13,7 @@ else
     cd('/Users/robert/documents/MATLAB/...');
     data_dir = '/Users/Tom/documents/.../data/';
 end
-file_names = dir(strcat(data_dir, 'follow_*.csv'));
+file_names = dir(strcat(data_dir, '*_beach*.csv'));
 all_data = read_csvs(data_dir, file_names);
 
 
@@ -31,7 +31,7 @@ for i=1:num_other_agents
     other_name = others(i);
     data_other = all_data(strcmp(all_data.agent, other_name),:);
     % drop action since we cannot know this, and agent name
-    data_other.action = [];
+    data_other.status = [];
     data_other.agent = [];
     % modify variable names to distinguish them from agent one
     for v=1:num_vars-2
@@ -39,13 +39,13 @@ for i=1:num_other_agents
             data_other.Properties.VariableNames(v), ...
             '_', other_name);
     end
-    data = innerjoin(data, data_other, 'LeftKeys', 1, 'RightKeys', 1); 
+    data = innerjoin(data, data_other, 'LeftKeys', [1, 6], 'RightKeys', [1, 4]); 
 end
 data.agent = [];
 % change action variable to binary
 data.target = zeros(size(data, 1), 1);
-data.target(strcmp(data.action, 'cruising') == 0) = 1;
-data.action = [];
+data.target(strcmp(data.status, 'evading!') == 1) = 1;
+data.status = [];
 
 % 3. transform other agents positions into features
 var_names = data.Properties.VariableNames;
@@ -59,7 +59,6 @@ for i=1:num_other_agents
     newy_var_name = strcat('one_', others(i), '_y_dist');
     other_y_var_name = strcat('y_pos_', others(i));
     data{:, newy_var_name} = abs(data.y_pos - data{:, other_y_var_name});
-    
 end
 
 % split into test and training data
@@ -75,23 +74,17 @@ y_test = y(test(cvpart), :);
 
 % fit model on training data
 boost = fitensemble(x_train, y_train, 'AdaBoostM1', 250, 'Tree');
-pred = predict(boost, x_test);
+% pred = predict(boost, x_test);
 
 figure;
-plot(loss(boost, x_test, y_test, 'mode', 'cumulative'));
-xlabel('Number of trees');
-ylabel('Test classification error');
-
-cv = fitensemble(x_train, y_train, 'AdaBoostM1', 200, 'Tree', ...
-    'type', 'classification', 'kfold', 5);
-figure;
-plot(loss(boost, x_test, y_test, 'mode', 'cumulative'));
+plot(loss(boost, x_train, y_train, 'mode', 'cumulative'), 'b');
 hold on;
-plot(kfoldLoss(cv, 'mode', 'cumulative'), 'r.');
+plot(loss(boost, x_test, y_test, 'mode', 'cumulative'), 'r');
 hold off;
-xlabel('Number of trees');
-ylabel('Classification error');
-legend('Test','Cross-validation','Location','NE');
+legend('Train','Test','Location','NE');
+xlabel('Number of Trees');
+ylabel('Classification Error');
+title('AdaBoost Behavior Classification Error');
 
 
 
