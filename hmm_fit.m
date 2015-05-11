@@ -51,4 +51,11 @@ while  iter < max_iterations
     end
 end
 
+if any(any(isnan(A)))
+    A = zeros(size(A));
+end
+if any(any(isnan(B)))
+    B = zeros(size(B));
+end
+
 end

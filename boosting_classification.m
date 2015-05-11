@@ -41,7 +41,8 @@ tar_var = {'target'};
 % random_model = fitensemble(x_train, y_train(:,1), 'AdaBoostM1', 250, 'Tree');
 % pursue_model = fitensemble(x_train, y_train(:,2), 'AdaBoostM1', 250, 'Tree');
 % cutoff_model = fitensemble(x_train, y_train(:,3), 'AdaBoostM1', 250, 'Tree');
-model = fitensemble(x_train, y_train, 'AdaBoostM2', 250, 'Tree');
+tree_type = templateTree('MaxNumSplits',3);
+model = fitensemble(x_train, y_train, 'AdaBoostM2', 250, tree_type);
 
 % plot the model error vs. complexity
 figure;
@@ -53,7 +54,10 @@ legend('Train','Test','Location','NE');
 xlabel('Number of Trees');
 ylabel('Classification Error');
 title('AdaBoost Classification Error');
-% loss(model, x_test, y_test, 'mode', 'ensemble')
+% What is overall accuracy
+test_accuracy = loss(model, x_test, y_test, 'mode', 'ensemble')
+train_accuracy = loss(model, x_train, y_train, 'mode', 'ensemble')
+
 
 % figure;
 % plot(loss(random_model, x_train, y_train(:, 1), 'mode', 'cumulative'), 'b');
