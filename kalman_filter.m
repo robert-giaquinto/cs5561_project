@@ -1,6 +1,6 @@
 clear;
 close;
-
+matlabmail('rings034@gmail.com','hi','currently running kalman','trdummy4@gmail.com','matlabpw?);
 % IMPORT DATA
 % where are data files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
@@ -12,7 +12,7 @@ else
     data_dir = ('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/data/');
 end
 
-source_data = 'real';
+source_data = 'synthetic';
 if strcmp(source_data, 'real')
     nthFrame = 5; % Take every nth frame from the video.
 %     frameStart = 2900;
@@ -86,7 +86,7 @@ for i = 1:9
 end
 
 % reduce noise of foreground:
-% label connected regions, keep only regions 25% as large as largest region
+% label connected regions, keep only regions 33% as large as largest region
 fore_mask_img = label_regions(fore_array, 4, .33);
 figure('Name','Foreground Mask','NumberTitle','off');
 for i = 1:9
@@ -294,4 +294,5 @@ for f = 2:eFrame
     disp(f)
     
 end
+matlabmail('rings034@gmail.com','hi','successfully ran kalman','trdummy4@gmail.com','matlabpw?);
 

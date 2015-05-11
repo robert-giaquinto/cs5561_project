@@ -195,5 +195,6 @@ end
 disp(sprintf('Test error rate: %1.3f', 1- mean(predict_correct)))
 % how often is each class predicted?
 mean(preds);
+matlabmail('giaquinto.ra@gmail.com','hi','successfully ran hmm classification, check results','trdummy4@gmail.com','matlabpw?);
 
 

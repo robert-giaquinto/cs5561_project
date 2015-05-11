@@ -1,4 +1,8 @@
 function data = transform_data(all_data, NUM_ROWS, NUM_COLS)
+% this is a function to transform the raw csv files
+% into a dataset that is usable by matlab's classification
+% tools. It also pulls out key features for prediction.
+
 % 1. add speed and direction features to data
 all_data.velocity = zeros([size(all_data, 1), 1]);
 all_data.direction = zeros([size(all_data, 1), 1]);

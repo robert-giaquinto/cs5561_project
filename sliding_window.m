@@ -1,4 +1,10 @@
 function [x_seq, y_seq] = sliding_window(clusters, y, window_sz, num_steps)
+% this is a function to split observations into multiple
+% observations via a sliding window.
+% automatically, slides the window 1 frame from window_sz
+% to total number of frames in the image.
+% will separate different videos into different observations (no
+% overlapping).
 
 num_videos = size(clusters,1) / num_steps;
 

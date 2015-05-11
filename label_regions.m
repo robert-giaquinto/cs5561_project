@@ -8,6 +8,7 @@ bw_fore(bw_fore ~= 0) = 1;
 % loop through each image and label the connected regions
 labeled_array = zeros(size(fore_array));
 for i = 1:num_images
+    % use matlab's BWLABELN function to do heavy lifting
     labeled = bwlabeln(bw_fore(:,:,1,i), num_neighbors);
     label_size = tabulate(labeled(:));
     % drop the zero region

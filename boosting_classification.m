@@ -2,7 +2,7 @@ clear;
 close;
 
 %%
-%%  PART ONE: TRAINING CLASSIFIER ON SYNTHETIC DATA
+%%  PART ONE: TRAINING CLASSIFIER ON SYNTHETIC DATA --------------------
 %%
 
 % Import and clean data
@@ -27,21 +27,21 @@ data = transform_data(all_data, NUM_ROWS, NUM_COLS);
 
 % split into test and training data
 % variable names to train data on:
-% pred_vars = {'velocity','direction','velocity_two','direction_two','distance'};
 pred_vars = {'velocity', 'direction', ...
     'velocity_two', 'direction_two', ...
     'velocity_dif', 'direction_dif', 'distance'};
 num_features = length(pred_vars);
 % what behavior do we want to be able to recognize?
-% tar_var = {'random', 'pursue', 'cutoff'};
 tar_var = {'target'};
 [x_train, y_train, x_test, y_test] = split_data(data, pred_vars, tar_var, .3);
 
 % fit model on training data
+% fit one vs. all models (not as good):
 % random_model = fitensemble(x_train, y_train(:,1), 'AdaBoostM1', 250, 'Tree');
 % pursue_model = fitensemble(x_train, y_train(:,2), 'AdaBoostM1', 250, 'Tree');
 % cutoff_model = fitensemble(x_train, y_train(:,3), 'AdaBoostM1', 250, 'Tree');
-tree_type = templateTree('MaxNumSplits',3);
+% fit each class at once (better):
+tree_type = templateTree('MaxNumSplits',3); % change tree depth
 model = fitensemble(x_train, y_train, 'AdaBoostM2', 250, tree_type);
 
 % plot the model error vs. complexity
@@ -58,7 +58,7 @@ title('AdaBoost Classification Error');
 test_accuracy = loss(model, x_test, y_test, 'mode', 'ensemble')
 train_accuracy = loss(model, x_train, y_train, 'mode', 'ensemble')
 
-
+% plot accuracy from each of the 1 vs. all models
 % figure;
 % plot(loss(random_model, x_train, y_train(:, 1), 'mode', 'cumulative'), 'b');
 % hold on;
@@ -94,17 +94,14 @@ train_accuracy = loss(model, x_train, y_train, 'mode', 'ensemble')
 
 
 %%
-%% PART TWO: DEMO OF CLASSIFICATION ON SYNTHETIC DATA
+%% PART TWO: DEMO OF CLASSIFICATION ON SYNTHETIC DATA -------------------
 %%
 
-% import a file data 
+% import data to test on
 demo_file = 'beach3_follow.csv';
 demo_data = data(strcmp(data.file, demo_file), :);
 
 % predict probability of each behavior
-% [~, random] = predict(random_model, demo_data{:, pred_vars});
-% [~, pursue] = predict(pursue_model, demo_data{:, pred_vars});
-% [~, cutoff] = predict(cutoff_model, demo_data{:, pred_vars});
 demo_data.prediction = predict(model, demo_data{:, pred_vars});
 
 
@@ -113,19 +110,20 @@ train_file = dir(strcat(data_dir, 'beach2_follow.gif'));
 train_file_name = strcat(data_dir, train_file.name);
 train_array = create_img_array(train_file_name);
 train_mat = array_to_matrix(train_array);
+
 % use train_mat to build background model
 back_vec = background_model(train_mat, 'mean', 6);
-
 demo_file_name = strcat(data_dir, demo_file(1:(end-3)), 'gif');
 demo_array = create_img_array(demo_file_name);
 demo_mat = array_to_matrix(demo_array);
 
 % subtract background model from each image in test_mat
 est_fore_mask = foreground_mask(back_vec, demo_mat, .175);
+
 % reduce noise of foreground:
 % label connected regions, keep only regions 25% as large as largest region
 est_fore_array = matrix_to_array(est_fore_mask, NUM_ROWS, NUM_COLS);
-foreground = label_regions(est_fore_array, 4, .4);
+foreground = label_regions(est_fore_array, 4, .25);
 
 num_frames = 50;
 figure;
@@ -148,13 +146,16 @@ for i = 1:num_frames
 end
 
 
+
+
+
 %%
-%% PART THREE: DEMO CLASSIFICATION ON REAL DATA
+%% PART THREE: DEMO CLASSIFICATION ON REAL DATA -------------------------
 %%
-% import video
-nthFrame = 10; % Take every nth frame from the video.
-frameStart = 2900;
-frameStop = 3350;
+% import real video
+nthFrame = 5; % Take every nth frame from the video.
+frameStart = 1500;
+frameStop = 3400;
 vid = VideoReader(strcat(data_dir, 'GOPR0303.mp4'));
 vidWidth = vid.Width;
 vidHeight = vid.Height;
@@ -171,10 +172,63 @@ end
 NUM_ROWS = vidHeight/frameSizeFactor;
 NUM_COLS = vidWidth/frameSizeFactor;
 
+% APPLY IMAGE DENOISING TECHNIQUES
+% Convert to 4D array to matrix for analysis
+img_mat = array_to_matrix(img_array);
+% CREATE BACKGROUND MODEL
+% split image array into a training and test set
+training_sz = nFrames*.5;
+x_train = img_mat(1:training_sz, :);
+num_components = 5;
+% use Oliver's eigenbackground approach, taking mean in low D space
+back_vec = background_model(x_train, 'mean', num_components);
 
-% for speed, load the estimated locations that Tom derived with
-% his Kalman filter
-% load chaseCoor.mat;
+% CREATE FOREGROUND MASK
+threshold = .075;
+fore_mask = foreground_mask(back_vec, img_mat, threshold); % threshold should be 0.05 for video
+fore_array = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
+
+% reduce noise of foreground:
+% label connected regions, keep only regions 25% as large as largest region
+fore_mask_img = label_regions(fore_array, 4, .33);
+
+% track locations of objects
+pFrame = fore_mask_img(:,:,:,1);
+feature1 = load('feat.mat');
+feature1 = feature1.feat;
+feature1 = rgb2gray(feature1);
+feature2 = feature1;
+feature1 = load('featureP.mat');
+feature1 = feature1.featureP;
+featCoorMap = zeros(2,2,size(fore_mask_img,4)); % feature # X leftRight
+numOfObjects = 2;
+for f = 2:size(fore_mask_img,4)
+    cFrame = fore_mask_img(:,:,:,f);
+    cFrame = rgb2gray(cFrame);
+    a = 1;
+    xcorrMat = normxcorr2(feature1, cFrame);
+    for i = 1:numOfObjects
+        
+        [r,c] = find(xcorrMat == max(max(xcorrMat)));
+        r = r(1); c = c(1);
+        
+        ydist = (size(feature1,1)/2)+5;
+        xdist = (size(feature1,2)/2)+2;
+        ytodel = r-floor(ydist):ceil(r+ydist);
+        xtodel = c-floor(xdist):ceil(c+xdist);
+        xcorrMat(ytodel,xtodel) = 0;
+        flag = false;
+        
+        r = min(max(floor(r - (size(feature1,1)/2)),1),size(cFrame,1));
+        c = min(max(floor(c - (size(feature1,2)/2)),1),size(cFrame,2));
+        
+        featCoorMap(i,1:2,f) = [r,c]; %1 = y, 2 = x
+    end
+    newFeature = cFrame(max(r - size(feature1,1),1):min(r-1,size(cFrame,1)), ...
+        max(c - size(feature1,2),1):min(c-1,size(cFrame,1)));
+    pFrame = cFrame;
+end
+
 % transform kalman filter coordinates to 2D table
 real_data = zeros(nFrames-1, num_features);
 locations = zeros(nFrames-1, 4);
@@ -232,42 +286,14 @@ for i = 1:num_features
     real_data(:,i) = real_data(:,i) * (mean(x_train(:,i)) / mean(real_data(:,i)));
 end
 
-
-% predict what is happening
+% predict what is happening using trained model
 prediction = predict(model, real_data);
-
-
-% CONVERT 4D array to matrix for analysis
-img_mat = array_to_matrix(img_array);
-% remove background of real data
-back_vec = background_model(img_mat, 'mean', 3);
-back_img = matrix_to_array(back_vec, NUM_ROWS, NUM_COLS);
-imshow(uint8(back_img*255)); title('Background Image');
-
-
-
-% subtract background model from each image in test_mat
-est_fore_mask = foreground_mask(back_vec, img_mat, .05);
-% reduce noise of foreground:
-% label connected regions, keep only regions 25% as large as largest region
-est_fore_array = matrix_to_array(est_fore_mask, NUM_ROWS, NUM_COLS);
-foreground = label_regions(est_fore_array, 4, .25);
-
-
-
-
-
-
 
 figure;
 block_sz = 4;
-for i = 175:(nFrames-1)
-%     if i == 175
-%         pause(5);
-%     end
-    
+for i = 1:(nFrames-1)    
     pause(0.05);
-    fore_frame = foreground(:,:,:, i) * 255;
+    fore_frame = fore_mask_img(:,:,:, i) * 255;
     x1 = locations(i,1);
     y1 = locations(i,2);
     x2 = locations(i,3);
@@ -308,10 +334,8 @@ for i = 175:(nFrames-1)
     end
     imshow(uint8(fore_frame));
     text(NUM_COLS/3, 4*NUM_ROWS/5, strcat('\bf\color{white}\fontsize{24}', prediction(i)));
-    drawnow;
-%     if i == 175
-%         pause(10);
-%     end
+    drawnow;s
 end
+matlabmail('giaquinto.ra@gmail.com','hi','successfully ran boosting classification, go check results','trdummy4@gmail.com','matlabpw?);
 
 

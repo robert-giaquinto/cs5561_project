@@ -1,4 +1,6 @@
 function labels = assign_cluster(cluster_centers, x)
+% This is a function to assign a known cluster centroid
+% (cluster_centers) to a new set of observations (x)
 
 num_points = size(x, 1);
 num_clusters = size(cluster_centers, 1);
@@ -15,6 +17,5 @@ for k = 1:num_clusters
         end
     end
 end
-
 
 end
