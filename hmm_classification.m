@@ -13,6 +13,9 @@ else
     cd('/Users/robert/documents/MATLAB/...');
     data_dir = '/Users/Tom/documents/.../data/';
 end
+% FOR PROFESSOR OR TA:
+data_dir = '';
+
 file_names = dir(strcat(data_dir, 'beach*.csv'));
 NUM_ROWS = 480;
 NUM_COLS = 480;

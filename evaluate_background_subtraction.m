@@ -14,7 +14,8 @@ else
     cd('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/');
     data_dir = ('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/data/');
 end
-
+% FOR PROFESSOR OR TA:
+data_dir = '';
 
 file_names = dir(strcat(data_dir, 'beach*_follow.gif'));
 
