@@ -3,13 +3,17 @@ library(png)
 library(animation)
 library(grid)
 
-set.seed(1234)
-
 # load tracking functions
 source("/Users/robert/Documents/UMN/5561_CV/Project/code/tracking_functions.R")
 
 # plot a few simulations
-save_simulations <- function(num_simulations, follow, background_filename, num_steps=50, plot_size=1) {
+save_simulations <- function(num_simulations,
+	method,
+	background_filename,
+	num_steps=50,
+	plot_size=1,
+	out_dir = '/Users/robert/Documents/UMN/5561_CV/project/data/')
+{
 	Sys.unsetenv("PATH")
 	Sys.setenv(PATH='/opt/local/bin')
 	background <- readPNG(paste0(background_filename, ".png"))
@@ -22,19 +26,21 @@ save_simulations <- function(num_simulations, follow, background_filename, num_s
 	ani.options(nmax=num_steps)
 
 	# run simulations
-	for (sim in 1:num_simulations) {
-		filename_root <- paste0(ifelse(follow,"follow_","random_"),
-			background_filename,
-			sim)
+	for (sim in 51:(num_simulations+50)) {
+		filename_root <- paste0(background_filename,
+			sim,
+			ifelse(method == "follow", "_follow",
+				ifelse(method == "cutoff", "_cutoff", "_random")))
 		# build data
 		agent2_range <- runif(1, min=.2, max=.3) # randomize visibility a little
-		DF <- two_agent_movement(follow, num_steps, agent2_range, plot_size)
+		DF <- two_agent_movement(method, num_steps, agent2_range, plot_size)
+
 		# save data in case needed later
 		write.csv(DF,
-			file=paste0(filename_root, ".csv"),
+			file=paste0(out_dir, filename_root, ".csv"),
 			row.names=FALSE)
 		# create foreground mask and save it
-		mask_name <- paste0("mask_", filename_root, ".gif")
+		mask_name <- paste0(out_dir, filename_root, "_mask.gif")
 		saveGIF({
 			for (i in 1:num_steps) {
 				print(
@@ -62,7 +68,7 @@ save_simulations <- function(num_simulations, follow, background_filename, num_s
 			movie.name = mask_name)
 
 		# create gif and save it
-		gif_name <- paste0(filename_root, ".gif")
+		gif_name <- paste0(out_dir, filename_root, ".gif")
 		saveGIF({
 			for (i in 1:num_steps) {
 				print(
@@ -92,12 +98,16 @@ save_simulations <- function(num_simulations, follow, background_filename, num_s
 }
 
 # run a few simulations
-save_simulations(num_simulations=10,
-	follow=TRUE,
+save_simulations(num_simulations=25,
+	method="follow",
 	background_filename="beach")
 
-save_simulations(num_simulations=10,
-	follow=FALSE,
+save_simulations(num_simulations=25,
+	method="cutoff",
+	background_filename="beach")
+
+save_simulations(num_simulations=20,
+	method="random",
 	background_filename="beach")
 
 

@@ -2,7 +2,7 @@ function back_vec = background_model(x_train, method, num_components)
 % use data from x_train to create a model/image of the background
 %
 % x_train: a matrix with 1 row per image frame, each column represents a pixel
-%     PCA is trained on this data
+%     SVD is trained on this data
 % return: a vector that represents the background image
     
 % set some default arguments
@@ -20,17 +20,19 @@ end
 x_mean = mean(x_train, 1);
 x_standard = bsxfun(@minus, x_train, x_mean);
 % apply SVD decomposition on standardized data
+% this is much faster than eigen(cov(x_standard)
 [U, S, pc] = svds(x_standard, num_components);
 clear U; clear S;
 
 % use principal components to reduce dimensionality of data
 x_pca = x_standard * pc;
 
-% aggregate the frames in the low dimensional space
+% find background in the low dimensional space
 if strcmp(method, 'median')
     back_pca = median(x_pca, 1);
 else
     % default to taking the mean of each frame
+    % this is the approach taken by Oliver 2000
     back_pca = mean(x_pca, 1);
 end
 

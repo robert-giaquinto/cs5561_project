@@ -1,41 +1,8 @@
-% numOfObjects = 2;
-% frameSizeFactor = 4; % Makes frames smaller, faster to compute.
-% 
-% % April 7th: I changed the input of matrix_to_array(img_mat, NUM_ROWS, NUM_COLS)
-% % to matrix_to_array(img_mat, NUM_COLS, NUM_ROWS).  It fixed the
-% % problem, and I don't know why.
-% 
-% 
-% % IMPORT VIDEO
-% 
-% nthFrame = 10; % Take every nth frame from the video.
-% frameStart = 2420;
-% frameStop = 2650;
-% vid = VideoReader('GOPR0303.mp4'); %gopro0302 starts at 1770, ends at 2330. There is more after though
-%                                    %gopro0303 1650-2150. 2420-2650. 2900-3350
-% vidWidth = vid.Width;
-% vidHeight = vid.Height;
-% nFrames = ((frameStop-frameStart)/nthFrame); %%// xyloObj.NumberOfFrames;
-% %mov = struct('cdata',zeros(vidHeight,vidWidth,3,'uint8'),'colormap',[]);
-% %mov(1:nFrames) = struct('cdata', zeros(vidHeight, vidWidth, 3, 'uint8'),'colormap',[]);
-% mov = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3,nFrames);
-% vidIndexList = frameStart:nthFrame:frameStop; % holds all of the indicies of the frames to be used.
-% for k = 1:length(vidIndexList)
-%     IMG = read(vid, vidIndexList(k));
-%     mov(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
-% end
+clear;
+close;
 
-
-
-mov = load('0303movDeflection');
-mov = mov.mov;
-% GOBAL PARAMETERS;
-NUM_ROWS = 480;
-NUM_COLS = 480;
-NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
-NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
-
-% where are files located?
+% IMPORT DATA
+% where are data files located?
 user_name = strtrim(char(java.lang.System.getProperty('user.name')));
 if strcmp(user_name, 'robert')
     cd('/Users/robert/documents/UMN/5561_CV/project/code');
@@ -44,51 +11,70 @@ else
     cd('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/');
     data_dir = ('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/data/');
 end
-file_names = dir(strcat(data_dir, '*.gif'));
 
+source_data = 'real';
+if strcmp(source_data, 'real')
+    nthFrame = 5; % Take every nth frame from the video.
+%     frameStart = 2900;
+%     frameStop = 3350;
+    frameStart = 1500;
+    frameStop = 3400;
+     %gopro0302 starts at 1770, ends at 2330. There is more after though
+    %gopro0303 1650-2150. 2420-2650. 2900-3350
+    vid = VideoReader(strcat(data_dir, 'GOPR0303.mp4'));
+    vidWidth = vid.Width;
+    vidHeight = vid.Height;
+    nFrames = ((frameStop-frameStart)/nthFrame);
 
+    % Make frames smaller, faster to compute.
+    frameSizeFactor = 4; 
+    img_array = zeros(vidHeight/frameSizeFactor,vidWidth/frameSizeFactor,3, nFrames);
+    vidIndexList = frameStart:nthFrame:frameStop; % holds all of the indicies of the frames to be used.
+    for k = 1:length(vidIndexList)
+        IMG = read(vid, vidIndexList(k));
+        img_array(:,:,:,k) = im2double(imresize(IMG,[vidHeight/frameSizeFactor vidWidth/frameSizeFactor]));
+    end
+    NUM_ROWS = vidHeight/frameSizeFactor; % For .mp4
+    NUM_COLS = vidWidth/frameSizeFactor; % For .mp4
+else
+    % import the synthetic data
+    file_names = dir(strcat(data_dir, '*.gif'));
+    file = file_names(1); %31 for single dot
+    file_name = strcat(data_dir, file.name);
+    img_array = create_img_array(file_name);
+    NUM_ROWS = 480;
+    NUM_COLS = 480;
+    nFrames = 50;
+end
 
-% READ IN GIF, PUT IN IMAGE ARRAY
-% % FOR GIF
-% file = file_names(1); %31 for single dot
-% file_name = strcat(data_dir, file.name);
-% img_array = create_img_array(file_name);
-
-% FOR MP4!
-img_array = mov; % For using the video sequence.
-% display 10th image
-
-
-img = img_array(:,:,:,10);
+% display first image from video
+img = img_array(:,:,:,1);
 imshow(uint8(img*255)); title('Image from GIF, stored in 4D array');
-
 
 % CONVERT 4D array to matrix for analysis
 img_mat = array_to_matrix(img_array);
-size(img_mat)
 
 % CONVERT image matrix back to a viewable 4D array
-img_array2 = matrix_to_array(img_mat, NUM_ROWS, NUM_COLS);
-img = img_array2(:,:,:,1)*255;
-% does it look the same as original? yes.
-figure('Name','Original Preserved','NumberTitle','off');
-imshow(uint8(img)); title('Transformation Back to Original');
+% img_array2 = matrix_to_array(img_mat, NUM_ROWS, NUM_COLS);
+% img = img_array2(:,:,:,1)*255;
+% % does it look the same as original? yes.
+% figure('Name','Original Preserved','NumberTitle','off');
+% imshow(uint8(img)); title('Transformation Back to Original');
 
 
 % CREATE BACKGROUND MODEL
-% need to put images into a matrix form!!!!
 % split image array into a training and test set
-% training_sz = 40; % FOR GIF
-training_sz = nFrames; % FOR GIF
+training_sz = nFrames*.5;
 x_train = img_mat(1:training_sz, :);
 num_components = 5;
-back_vec = background_model(x_train, 'median', num_components);
+% use Oliver's eigenbackground approach, taking mean in low D space
+back_vec = background_model(x_train, 'mean', num_components);
 back_img = matrix_to_array(back_vec, NUM_ROWS, NUM_COLS);
 imshow(uint8(back_img*255)); title('Background Image');
 
 
 % CREATE FOREGROUND MASK
-threshold = .05;
+threshold = .075;
 fore_mask = foreground_mask(back_vec, img_mat, threshold); % threshold should be 0.05 for video
 fore_array = matrix_to_array(fore_mask, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Mask','NumberTitle','off');
@@ -101,7 +87,7 @@ end
 
 % reduce noise of foreground:
 % label connected regions, keep only regions 25% as large as largest region
-fore_mask_img = label_regions(fore_array, 4, .25);
+fore_mask_img = label_regions(fore_array, 4, .33);
 figure('Name','Foreground Mask','NumberTitle','off');
 for i = 1:9
     frame = fore_mask_img(:,:,:, i);
@@ -121,7 +107,7 @@ feature2 = feature1;
 feature1 = load('featureP.mat');
 feature1 = feature1.featureP;
 featCoorMap = zeros(2,2,size(fore_mask_img,4)); % feature # X leftRight
-
+numOfObjects = 2;
 for f = 2:size(fore_mask_img,4)
     cFrame = fore_mask_img(:,:,:,f);
     cFrame = rgb2gray(cFrame);
@@ -161,7 +147,7 @@ end
 
 % EIGENBACKGROUND ALGORITHM: show only foreground
 % applies some of the functions used above all in one step
-fore_mat = eigenback(x_train, img_mat, threshold, 'median', num_components);
+fore_mat = eigenback(x_train, img_mat, threshold, 'mean', num_components, 1, NUM_ROWS, NUM_COLS);
 fore_img = matrix_to_array(fore_mat, NUM_ROWS, NUM_COLS);
 figure('Name','Foreground Images','NumberTitle','off');
 f = load('featText.mat');
@@ -175,6 +161,8 @@ for i = 2:18
         imshow(uint8(frame)); title(plot_title);
     end
 end
+
+
 
 % %% Kalman Filter Code
 % fileStruct = load('doubleDot');

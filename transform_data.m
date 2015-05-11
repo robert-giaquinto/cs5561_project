@@ -2,20 +2,27 @@ function data = transform_data(all_data, NUM_ROWS, NUM_COLS)
 % 1. add speed and direction features to data
 all_data.velocity = zeros([size(all_data, 1), 1]);
 all_data.direction = zeros([size(all_data, 1), 1]);
+% make distance functions relative to the size of the window frame
+% using a normalization constant:
+normalization = sqrt(NUM_ROWS^2 + NUM_COLS^2);
+
 for i = 2:size(all_data,1)
     if strcmp(all_data.agent(i), all_data.agent(i-1)) && strcmp(all_data.file(i), all_data.file(i-1))
         % previous information available
         x_dif = (all_data.x_pos(i) - all_data.x_pos(i-1)) * NUM_COLS;
         y_dif = (all_data.y_pos(i) - all_data.y_pos(i-1)) * NUM_ROWS;
-        distance = sqrt(x_dif^2 + y_dif^2);
-        all_data.velocity(i) = round(distance, 2);  % assume one time step
-        direction = round(atand(y_dif / x_dif));
-        if direction < 0
-            direction = direction + 360;
-        elseif direction > 360
-            direction = direction - 360;
+        % assume one time step in speed calculation
+        all_data.velocity(i) = sqrt(x_dif^2 + y_dif^2) / normalization;
+        
+        unit_scale = sqrt(x_dif^2 + y_dif^2);
+        direction = atan((y_dif/unit_scale) / (x_dif/unit_scale));
+        if direction < -1 * pi
+            direction = direction + (2 * pi);
+        elseif direction > pi
+            direction = direction - (2 * pi);
         elseif isnan(direction)
-            direction = 0;
+            % x dif might be zero => direction is up or down
+            direction = sign(y_dif) * pi/2;
         end
         all_data.direction(i) = direction;
     end
@@ -47,10 +54,25 @@ for i=1:num_other_agents
 end
 data.agent = [];
 % change action variable to binary
-data.evade = zeros(size(data, 1), 1);
-data.evade(strcmp(data.status, 'evade') == 1) = 1;
+data.random = zeros(size(data, 1), 1);
+data.random(strcmp(data.status, 'safe') == 1) = 1;
+data.pursue = zeros(size(data, 1), 1);
+data.pursue(strcmp(data.status, 'evade') == 1) = 1;
 data.cutoff = zeros(size(data, 1), 1);
 data.cutoff(strcmp(data.status, 'cutoff') == 1) = 1;
+
+target = cellstr(repmat('zeros', size(data,1), 1));
+for i = 1:size(data,1)
+    d = data(i,:);
+    if strcmp(d.status, 'safe')
+        target{i} = 'random';
+    elseif strcmp(d.status, 'evade')
+        target{i} = 'pursue';
+    elseif strcmp(d.status, 'cutoff')
+        target{i} = 'cutoff';
+    end
+end
+data.target = target;
 data.status = [];
 
 % 3. transform other agents positions into features
@@ -64,7 +86,11 @@ for i=1:num_other_agents
     other_y_var_name = strcat('y_pos_', others(i));
     data{:, newy_var_name} = abs(data.y_pos - data{:, other_y_var_name}) * NUM_ROWS;
 end
-data.distance = sqrt(data.one_two_x_dist.^2 + data.one_two_y_dist.^2);
+data.distance = sqrt(data.one_two_x_dist.^2 + data.one_two_y_dist.^2) / normalization;
+data.velocity_dif = data.velocity - data.velocity_two;
+data.direction_dif = data.direction - data.direction_two;
+data.one_two_x_dist = data.one_two_x_dist / NUM_COLS;
+data.one_two_y_dist = data.one_two_y_dist / NUM_ROWS;
 
 % finally transform data into meaningful order
 data = sortrows(data, {'file', 'step'});

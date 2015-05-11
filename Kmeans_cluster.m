@@ -19,7 +19,7 @@ for c = 1:num_clusters
 end
 
 % threshold to stop early if algorithm converges
-thresh = .01;
+thresh = .00001;
 delta = inf;
 iter = 0;
 tic

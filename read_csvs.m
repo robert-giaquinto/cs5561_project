@@ -10,7 +10,7 @@ elseif num_files > 1
         file_name = strcat(data_dir, file_names(f).name);
         % read in data as a table
         temp = readtable(file_name);
-        temp.file = ones(size(temp,1), 1) * f;
+        temp.file = repmat({file_names(f).name}, size(temp,1), 1);
         if f == 1
             % initialize data table as cell array
             data = cell(size(temp,1) * num_files, size(temp,2));

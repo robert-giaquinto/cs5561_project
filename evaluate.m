@@ -14,7 +14,10 @@ else
     cd('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/');
     data_dir = ('/Users/tomringstrom/Documents/MATLAB/TrackingProject/cs5561_project/data/');
 end
-file_names = dir(strcat(data_dir, 'follow_beach*.gif'));
+
+
+file_names = dir(strcat(data_dir, 'beach*_follow.gif'));
+
 
 
 %% Background subtraction ----------------------------
@@ -37,7 +40,7 @@ for g = 2:num_gifs
     test_mat = array_to_matrix(test_array);
 
     % load true foregorund for this test file
-    mask_file = strcat(data_dir, 'mask_', test_file.name);
+    mask_file = strcat(data_dir, test_file.name(1:(end-4)), '_mask.gif');
     mask_gif = importdata(mask_file);
     true_fore_array = mask_gif.cdata > 0;
     % convert to a logical matrix, ignore color channels
