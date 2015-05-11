@@ -339,6 +339,6 @@ for i = 1:(nFrames-1)
     text(NUM_COLS/3, 4*NUM_ROWS/5, strcat('\bf\color{white}\fontsize{24}', prediction(i)));
     drawnow;s
 end
-matlabmail('giaquinto.ra@gmail.com','hi','successfully ran boosting classification, go check results','trdummy4@gmail.com','matlabpw?);
+matlabmail('giaquinto.ra@gmail.com','hi','successfully ran boosting classification, go check results','trdummy4@gmail.com','matlabpw?');
 
 

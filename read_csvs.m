@@ -2,10 +2,7 @@ function data = read_csvs(data_dir, file_names)
 % data_dir: char, path to csv files
 % file_names an object created by dir function
 num_files = size(file_names, 1);
-if num_files == 1
-    file_name = strcat(data_dir, file_names(1).name);
-    data = readtable(file_name);
-elseif num_files > 1
+if num_files > 0
     for f = 1:num_files
         file_name = strcat(data_dir, file_names(f).name);
         % read in data as a table

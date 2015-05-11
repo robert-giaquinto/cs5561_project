@@ -94,10 +94,7 @@ for g = 2:num_gifs
     disp(sprintf('Background accuracy=%1.3f', avg(2)));
     disp(sprintf('Pixel accuracy=%1.3f\n', avg(3)));
 end
-
-csvwrite('Beach_Background_Accuracy.csv', mean_pct_correct);
-% csvwrite('Forest_Background_Accuracy.csv', mean_pct_correct);
-% csvwrite('Real_Background_Accuracy.csv', mean_pct_correct);
+% csvwrite('Beach_Background_Accuracy.csv', mean_pct_correct);
 
 
 

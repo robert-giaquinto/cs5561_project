@@ -1,4 +1,5 @@
 function [clusters, labels] = Kmeans_cluster(data, num_clusters)
+rng(123);
 max_iters = 150;
 num_points = size(data,1);
 num_features = size(data, 2);

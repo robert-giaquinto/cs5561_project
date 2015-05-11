@@ -50,7 +50,7 @@ x_stdev = std(x_train, 1);
 x_norm = bsxfun(@rdivide, bsxfun(@minus, x_train, x_mean), x_stdev);
 
 % call the K-means clustering function
-num_clusters = 10;
+num_clusters = 5;
 [cluster_centers, train_clusters] = Kmeans_cluster(x_norm, num_clusters);
 % un-normalize cluster centers to see how they look
 % bsxfun(@plus, bsxfun(@times, cluster_centers, x_stdev), x_mean)
